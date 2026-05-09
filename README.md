@@ -291,10 +291,6 @@ node run-selftest.mjs
 
 > ⚠️ **必读**：启用 `enable_agent_tools=true` 时，admin 在 QQ 端实际能让肥牛调用的**不只是下面这两张表**，而是 **my-neuro 主程序当前已启用的所有插件 `getTools()` 暴露的全部工具的并集 + 动态注册的工具**。
 >
-> 6.1 / 6.2 只是 `qq-connect` 自己**注册进这个并集**的那部分；6.3 解释实际工具集合是怎么收集和路由的、为什么这件事会显著放大攻击面。
-
-启用 `enable_agent_tools=true` 时，admin 可以用自然语言通过 QQ 让肥牛执行工具调用。`qq-connect` 自带工具会先经过路径白名单 / 危险命令黑名单校验，校验失败直接返回错误；其他插件的工具的安全边界由它们自己实现，**本插件不做也无法做二次校验**。
-
 ### 6.1 qq-connect 自带的通用工具（来自 `agent-executor`）
 
 | 工具名 | 说明 | 入参 |
@@ -365,35 +361,6 @@ _handleToolCalls ──► _executeToolRouted(name, args)
 - 在 admin 私聊里直接问肥牛：「你现在有哪些工具可以调用？把所有 function 的 name 和 description 列给我」——LLM 会基于收到的 `tools` 数组照实回答。
 - 在 my-neuro 项目源码里 `console.log(global.pluginManager.getAllTools())` 是最权威的方式（开发者模式）。
 
-### 6.6 为什么这件事会显著放大攻击面（必读安全提示）
-
-`qq-connect` 自家的 `agent-executor` 工具实现里强制做了：
-
-- 路径黑名单（拒绝 `C:\Windows`、`Program Files`、`System32` 等系统目录）；
-- `allowed_paths` 用户配置的白名单二次约束；
-- 危险命令黑名单（`format`、`shutdown`、`net user`、`del /s` 等）；
-- 文件读取 100KB 上限、`run_command` 15 秒超时与 512KB 输出截断。
-
-**但其他插件的工具有没有这种保护，由那个插件自己决定，本插件无法干预**。常见放大场景：
-
-- 有插件提供 `execute_python(code)` / `eval(expression)` / `run_shell(cmd)` 这种"任意代码执行"工具，且自己没做沙箱 → admin 一句话即可绕过 qq-connect 的所有安全边界。
-- 智能家居 / IoT 插件：admin 通过 QQ 一句话开关你家的灯、空调、门锁、摄像头。
-- 浏览器自动化插件：admin 一句话让肥牛打开任意网址、自动填表、读取本地 cookie。
-- 邮件 / 通讯类插件：admin 一句话让肥牛冒充你给任意人发邮件。
-
-而你 admin 账号的安全等于一条 QQ 链路：
-
-1. **LLBot 的 OneBot token 没设 / 被泄** → 任何人能给你的机器人发指令；
-2. **你的 admin QQ 大号被盗** → 攻击者通过 QQ 直接获得"远程操控你电脑端所有插件"的能力。
-
-任意一个出问题，攻击者就拥有"通过 QQ 远程调用你桌面端所有启用插件"的权限。
-
-**因此强烈建议**：
-
-- 不需要远程操作时把 `enable_agent_tools` 设 `false`，QQ 端就只剩文字聊天通道，工具能力直接关闭；
-- admin 名单越小越好，最好只有你大号一个；trusted 路径本来就不传 tools，朋友放 trusted 是安全的；
-- 给 my-neuro 当前启用的每个新插件都过一眼它的 `getTools()`，确认没有未做沙箱的"任意命令执行"级工具——一旦被纳入并集，威胁面会立刻被放大；
-- 即使只用 qq-connect 自带工具，`allowed_paths` 也必须配置为某个工作目录（例如 `D:\\bot-workspace`），否则 admin 一句话可以让肥牛覆盖你硬盘上任意非系统目录的文件。
 
 ---
 
@@ -469,6 +436,14 @@ _handleToolCalls ──► _executeToolRouted(name, args)
 把肥牛接到 QQ 之后，它就不只是"开机才在桌面"的桌宠了——你出门的时候，它能在 QQ 上回你；你不在家的时候，它能远程帮你 `read_file` 看一眼写到一半的稿子；朋友顺手在群里 @ 它，它会用合适的语气回一句而不会泄露你跟它的私聊。
 
 如果这只小肥牛让你的工作 / 生活多了一点点温度，欢迎给上游 my-neuro 项目以及本插件作者一颗 star，或者给 my-neuro 主项目作者一杯快乐水。它会记住每一份善意。
+
+如果你在这只小肥牛这里获得过哪怕一秒钟的治愈，或者觉得它算个合格的桌面搭子，要不要考虑成为它的"云饲养员"呀？
+
+你的每一次充电，都不是在打赏我，而是在给这只肥牛注入一点点魔法值。让它能变得更聪明、更通人性、能听懂你更多的碎碎念。
+
+不用有压力哦！你愿意打开它，就是对我最大的鼓励啦。如果刚好有余力，就请肥牛喝瓶快乐水叭，它会记住你的味道的！
+
+爱发电 [https://ifdian.net/a/0923A](https://ifdian.net/a/0923A)
 
 ---
 
