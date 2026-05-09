@@ -1,4 +1,4 @@
-# QQ 消息平台（qq-connect）v1.1.0
+# QQ 消息平台（qq-connect）v1.1.1
 
 **my-neuro** 生态下的 **live-2d 社区插件**，通过 **OneBot 11** 协议把肥牛桥接到 QQ：admin 私聊与电脑端语音共享同一份主上下文（含压缩 + 持久化），群聊与陌生人走独立会话；并通过 **Function Calling** 暴露文件 / 系统 / 桌面 TTS / 表情切换等远程 Agent 工具，让你在外面也能用 QQ 远程"指挥"桌面上的肥牛。
 
@@ -289,9 +289,13 @@ node run-selftest.mjs
 
 ## 六、Function Calling 工具列表
 
-启用 `enable_agent_tools=true` 时，admin 可以用自然语言通过 QQ 让肥牛执行工具调用。工具会先经过路径白名单 / 危险命令黑名单校验，校验失败直接返回错误。
+> ⚠️ **必读**：启用 `enable_agent_tools=true` 时，admin 在 QQ 端实际能让肥牛调用的**不只是下面这两张表**，而是 **my-neuro 主程序当前已启用的所有插件 `getTools()` 暴露的全部工具的并集 + 动态注册的工具**。
+>
+> 6.1 / 6.2 只是 `qq-connect` 自己**注册进这个并集**的那部分；6.3 解释实际工具集合是怎么收集和路由的、为什么这件事会显著放大攻击面。
 
-### 6.1 通用工具
+启用 `enable_agent_tools=true` 时，admin 可以用自然语言通过 QQ 让肥牛执行工具调用。`qq-connect` 自带工具会先经过路径白名单 / 危险命令黑名单校验，校验失败直接返回错误；其他插件的工具的安全边界由它们自己实现，**本插件不做也无法做二次校验**。
+
+### 6.1 qq-connect 自带的通用工具（来自 `agent-executor`）
 
 | 工具名 | 说明 | 入参 |
 | --- | --- | --- |
@@ -306,14 +310,90 @@ node run-selftest.mjs
 | `change_mood` | 切换 Live2D 表情 | `emotion` |
 | `get_status` | 查询当前状态（平台 / 内存 / 模型） | — |
 
-### 6.2 QQ 工具
+### 6.2 qq-connect 自带的 QQ 工具
 
 | 工具名 | 说明 | 入参 |
 | --- | --- | --- |
 | `send_qq_private_message` | 主动私聊任意 QQ 用户 | `qq_number`, `message` |
 | `send_qq_group_message` | 主动给指定群发消息 | `group_id`, `message` |
 
-> ⚠️ admin 工具具备文件改写、命令执行、QQ 主动外发等能力。**`allowed_paths` 必须配置为你愿意让肥牛动的工作目录**（例如 `D:\\bot-workspace`），否则 admin 一句话可以让肥牛覆盖你硬盘上任意非系统目录的文件。
+### 6.3 实际可用工具 = 主程序所有已启用插件的工具并集
+
+QQ 端 admin 触发 LLM 调用工具的链路：
+
+```
+admin 在 QQ 说话
+   │
+   ▼
+qq-connect: _handleAdminMessage / _handleGroupAdminMessage
+   │  tools = enable_agent_tools ? _collectAllTools() : undefined
+   ▼
+_collectAllTools() ──► global.pluginManager.getAllTools()
+                        遍历所有已启用插件 → plugin.getTools()
+                        合并所有工具 + 动态注册的工具
+   │
+   ▼
+_callLLMWithTools(messages, tools)
+   │  LLM 决定 tool_calls
+   ▼
+_handleToolCalls ──► _executeToolRouted(name, args)
+                       │
+                       ▼
+                global.pluginManager.executeTool(name, args)
+                  按工具名遍历所有插件，找到声明了 name 的插件
+                  → plugin.executeTool(name, params)
+```
+
+也就是说，**admin 通过 QQ 能调到的工具集合 = 当前 my-neuro 实例下所有已启用插件 `getTools()` 暴露的工具的并集 + 动态注册的工具**。`qq-connect` 自带的 12 个只是其中一部分；如果你装了 `kimi-search`、`memos`、各种自定义插件、Python 桥接插件、智能家居插件等，它们暴露的工具也会**全部出现在 admin 通过 QQ 可调用的列表里**。
+
+### 6.4 各路径的工具可用性对照表
+
+| 来源 | 路径 | 是否传 tools 给 LLM | 实际工具集合 |
+| --- | --- | --- | --- |
+| admin 私聊 | `_handleAdminMessage`（unified_context=true） | ✅ 传 | 全局工具并集 |
+| admin 私聊（legacy） | `_handleAdminMessageLegacy`（unified_context=false） | ✅ 传 | 全局工具并集 |
+| admin 群里 @ | `_handleGroupAdminMessage` | ✅ 传 | 全局工具并集 |
+| trusted 私聊 | `_handleTrustedMessage` | ❌ 不传（走 `context.callLLM` 纯聊天） | — |
+| trusted/open 群里非 admin 发言 | `_handleGroupReply` | ❌ 不传 | — |
+| normal 转述 | `_handleNormalRelay` | ❌ 不进 LLM 决策 | — |
+
+**因此：trusted/normal 用户、群里其他成员永远调不到任何工具**，工具能力是 admin 专属。
+
+### 6.5 怎么查看"当前 my-neuro 实例实际可调用的工具列表"
+
+- 启动 my-neuro 时观察 `pluginManager` 注册日志，看哪些插件被加载。
+- 在 admin 私聊里直接问肥牛：「你现在有哪些工具可以调用？把所有 function 的 name 和 description 列给我」——LLM 会基于收到的 `tools` 数组照实回答。
+- 在 my-neuro 项目源码里 `console.log(global.pluginManager.getAllTools())` 是最权威的方式（开发者模式）。
+
+### 6.6 为什么这件事会显著放大攻击面（必读安全提示）
+
+`qq-connect` 自家的 `agent-executor` 工具实现里强制做了：
+
+- 路径黑名单（拒绝 `C:\Windows`、`Program Files`、`System32` 等系统目录）；
+- `allowed_paths` 用户配置的白名单二次约束；
+- 危险命令黑名单（`format`、`shutdown`、`net user`、`del /s` 等）；
+- 文件读取 100KB 上限、`run_command` 15 秒超时与 512KB 输出截断。
+
+**但其他插件的工具有没有这种保护，由那个插件自己决定，本插件无法干预**。常见放大场景：
+
+- 有插件提供 `execute_python(code)` / `eval(expression)` / `run_shell(cmd)` 这种"任意代码执行"工具，且自己没做沙箱 → admin 一句话即可绕过 qq-connect 的所有安全边界。
+- 智能家居 / IoT 插件：admin 通过 QQ 一句话开关你家的灯、空调、门锁、摄像头。
+- 浏览器自动化插件：admin 一句话让肥牛打开任意网址、自动填表、读取本地 cookie。
+- 邮件 / 通讯类插件：admin 一句话让肥牛冒充你给任意人发邮件。
+
+而你 admin 账号的安全等于一条 QQ 链路：
+
+1. **LLBot 的 OneBot token 没设 / 被泄** → 任何人能给你的机器人发指令；
+2. **你的 admin QQ 大号被盗** → 攻击者通过 QQ 直接获得"远程操控你电脑端所有插件"的能力。
+
+任意一个出问题，攻击者就拥有"通过 QQ 远程调用你桌面端所有启用插件"的权限。
+
+**因此强烈建议**：
+
+- 不需要远程操作时把 `enable_agent_tools` 设 `false`，QQ 端就只剩文字聊天通道，工具能力直接关闭；
+- admin 名单越小越好，最好只有你大号一个；trusted 路径本来就不传 tools，朋友放 trusted 是安全的；
+- 给 my-neuro 当前启用的每个新插件都过一眼它的 `getTools()`，确认没有未做沙箱的"任意命令执行"级工具——一旦被纳入并集，威胁面会立刻被放大；
+- 即使只用 qq-connect 自带工具，`allowed_paths` 也必须配置为某个工作目录（例如 `D:\\bot-workspace`），否则 admin 一句话可以让肥牛覆盖你硬盘上任意非系统目录的文件。
 
 ---
 
@@ -324,6 +404,7 @@ node run-selftest.mjs
 - [ ] `trusted_users` 里只有自己的 admin QQ + 你充分信任的人。
 - [ ] `trusted_groups` 不含开放陌生群。
 - [ ] `allowed_paths` 已限定到工作目录，不让 Agent 碰到系统 / 文档 / 隐私目录。
+- [ ] **已审计 my-neuro 当前启用的所有插件的 `getTools()`**，确认其中没有未做沙箱的"任意命令执行 / 任意路径访问 / 系统级别 / IoT 控制"工具会被 admin 通过 QQ 间接调用（详见 [6.6](#66-为什么这件事会显著放大攻击面必读安全提示)）。如果不需要远程工具能力，把 `enable_agent_tools` 设为 `false`。
 - [ ] 公开仓库 / 截图 / 日志里不要包含真实 QQ 号、token、合并转发原文。
 - [ ] 部署机已开自动锁屏与防火墙；新 QQ 小号已养号几天再接入。
 
@@ -345,6 +426,11 @@ node run-selftest.mjs
 ---
 
 ## 九、版本记录
+
+### v1.1.1（2026-05，文档修订）
+
+- **澄清 admin 工具权限范围**：之前 README 第六章只列出 `qq-connect` 自带的 12 个工具，容易让人误以为 admin 通过 QQ 只能调用这些。修订后第六章新增 6.3 / 6.4 / 6.5 / 6.6 四个小节，明确说明 admin 实际可调用的是 my-neuro 当前所有已启用插件 `getTools()` 暴露的工具的并集 + 动态注册的工具，并给出收集链路图、各路径工具可用性对照表、查看实际工具列表的方法、以及攻击面放大场景与缓解措施。
+- 安全自检清单（第七章）补一条：审计当前所有启用插件的 `getTools()`。
 
 ### v1.1.0（2026-05）
 

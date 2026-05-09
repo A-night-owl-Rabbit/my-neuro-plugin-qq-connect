@@ -1,7 +1,7 @@
 {
   "name": "qq-connect",
   "displayName": "QQ 消息平台",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": "FeiNiu",
   "description": "通过 OneBot 协议把肥牛桥接到 QQ：支持 AI 智能回复、私聊/群聊三级权限、Function Calling 远程 Agent 工具、admin 私聊与电脑端共享主上下文（含压缩与持久化）。v1.1.0 起 admin 回复入主上下文不再附加 [QQ回复] 前缀。",
   "framework_version": ">=1.0.0",
