@@ -1,0 +1,24 @@
+# Runtime / local (not for distribution)
+.runtime/
+.runtime
+*.log
+logs/
+
+# 不再打包 LLBOT 主程序与节点依赖（请用户自行下载/安装）
+LLBOT/
+node_modules/
+
+# 编辑器 / 系统临时文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 调试脚本（仅本地）
+test-*.js
+test-*.mjs
+debug-*.js
+
+# 任何含真实 QQ 号 / token 的实际配置（请勿提交）
+plugin_config.local.json
+plugin_config.private.json

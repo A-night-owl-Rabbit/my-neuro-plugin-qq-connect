@@ -1,0 +1,198 @@
+{
+  "onebot_url": {
+    "title": "OneBot WS 地址",
+    "description": "LLOneBot 的 OneBot 11 正向 WebSocket 地址（默认端口 3001）",
+    "type": "string",
+    "default": "ws://127.0.0.1:3001",
+    "value": "ws://127.0.0.1:3001"
+  },
+  "token": {
+    "title": "访问令牌",
+    "description": "OneBot 访问令牌（可选，与 LLOneBot 配置一致）",
+    "type": "string",
+    "default": "",
+    "value": ""
+  },
+  "auto_connect": {
+    "title": "自动连接",
+    "description": "插件启动时是否自动连接 OneBot 服务",
+    "type": "boolean",
+    "default": false,
+    "value": "false"
+  },
+  "trusted_users": {
+    "title": "信任用户列表",
+    "description": "JSON 数组，格式: [{\"qq\":\"123456\",\"level\":\"admin\",\"nickname\":\"主人\"}]。level: admin/trusted/normal",
+    "type": "string",
+    "default": "[]",
+    "value": "[]"
+  },
+  "trusted_groups": {
+    "title": "信任群聊列表",
+    "description": "JSON 数组，格式: [{\"group_id\":\"789012\",\"level\":\"trusted\"}]。level: trusted/open/normal",
+    "type": "string",
+    "default": "[]",
+    "value": "[]"
+  },
+  "normal_relay_probability": {
+    "title": "转述概率",
+    "description": "普通用户消息转述给管理员的概率（0-1）",
+    "type": "float",
+    "default": 0.1,
+    "value": 0.1
+  },
+  "open_reply_probability": {
+    "title": "开放群回复概率",
+    "description": "开放群中未 @ 时直接回复的概率（0-1）",
+    "type": "float",
+    "default": 0.1,
+    "value": 0.1
+  },
+  "max_reply_length": {
+    "title": "最大回复长度",
+    "description": "AI 回复最大字符数",
+    "type": "int",
+    "default": 200,
+    "value": 200
+  },
+  "reply_with_quote": {
+    "title": "回复时引用原消息",
+    "description": "启用后，机器人在 QQ 回复时会引用用户发来的那条消息。群聊多人说话时更容易看懂在回谁。",
+    "type": "boolean",
+    "default": false,
+    "value": "false"
+  },
+  "reply_with_mention": {
+    "title": "群聊回复时 @ 发送人",
+    "description": "启用后，机器人在群里回复时会先 @ 发送人。",
+    "type": "boolean",
+    "default": false,
+    "value": "false"
+  },
+  "forward_threshold": {
+    "title": "长回复合并转发阈值",
+    "description": "回复超过这个字数时，自动折叠成 QQ 合并转发，避免刷屏。0 表示关闭。",
+    "type": "int",
+    "default": 0,
+    "value": 0
+  },
+  "forward_expand_limit": {
+    "title": "合并转发展开上限",
+    "description": "收到别人发来的合并转发时，最多展开多少字给 AI 理解。超出会标注“内容已截断”。",
+    "type": "int",
+    "default": 4000,
+    "value": 4000
+  },
+  "ignore_bot_self_message": {
+    "title": "忽略机器人自身消息",
+    "description": "避免 QQ 自己发出的消息再次触发机器人，防止循环回复。",
+    "type": "boolean",
+    "default": true,
+    "value": "true"
+  },
+  "ignore_at_all": {
+    "title": "忽略 @全体成员",
+    "description": "群消息里的 @全体成员 不当作 @机器人 处理。",
+    "type": "boolean",
+    "default": true,
+    "value": "true"
+  },
+  "ignore_qq_official_account": {
+    "title": "屏蔽 QQ 管家消息",
+    "description": "忽略 QQ 管家账号 2854196310 的系统提示消息。",
+    "type": "boolean",
+    "default": true,
+    "value": "true"
+  },
+  "enable_segmented_reply": {
+    "title": "启用分段回复",
+    "description": "开启后，较长回复会按句号/问号/感叹号拆成多条发送，更像真人聊天。默认关闭。",
+    "type": "boolean",
+    "default": false,
+    "value": "false"
+  },
+  "segmented_reply_interval_ms": {
+    "title": "分段回复间隔（毫秒）",
+    "description": "启用分段回复后，每段之间等待多久再发送。",
+    "type": "int",
+    "default": 1500,
+    "value": 1500
+  },
+  "rate_limit_window_sec": {
+    "title": "限流窗口（秒）",
+    "description": "在这个时间窗口内限制最多处理多少条 QQ 消息。",
+    "type": "int",
+    "default": 60,
+    "value": 60
+  },
+  "rate_limit_count": {
+    "title": "限流条数",
+    "description": "每个限流窗口内最多处理的消息数量。",
+    "type": "int",
+    "default": 30,
+    "value": 30
+  },
+  "rate_limit_strategy": {
+    "title": "限流策略",
+    "description": "stall 表示超过限流后排队等待；discard 表示直接丢弃超出的消息。",
+    "type": "string",
+    "default": "stall",
+    "value": "stall"
+  },
+  "action_timeout_ms": {
+    "title": "OneBot 调用超时（毫秒）",
+    "description": "get_msg、get_forward_msg、发送消息等 OneBot action 等待回包的最长时间。",
+    "type": "int",
+    "default": 10000,
+    "value": 10000
+  },
+  "warn_empty_token": {
+    "title": "Token 为空时提醒",
+    "description": "启用后，如果 OneBot 访问令牌为空，插件启动连接时会输出安全提醒。",
+    "type": "boolean",
+    "default": true,
+    "value": "true"
+  },
+  "session_timeout": {
+    "title": "会话超时（秒）",
+    "description": "Trusted/群聊用户会话空闲超时时间",
+    "type": "int",
+    "default": 300,
+    "value": 300
+  },
+  "unified_context_enabled": {
+    "title": "启用统一上下文（admin 私聊）",
+    "description": "开启后，admin 通过 QQ 私聊与肥牛对话会直接进入主 voiceChat.messages，与电脑端共享一份带压缩、可持久化的上下文。群聊不受影响（始终走独立 session）。关闭后 admin 私聊回退到独立 _adminSession 旧行为。",
+    "type": "boolean",
+    "default": true,
+    "value": "true"
+  },
+  "qq_private_prefix": {
+    "title": "admin QQ 私聊消息前缀",
+    "description": "admin 私聊消息进入主上下文时附加的来源前缀，仅作用于 admin 私聊。群聊不入主上下文，不需要前缀。",
+    "type": "string",
+    "default": "[QQ]",
+    "value": "[QQ]"
+  },
+  "qq_reply_prefix": {
+    "title": "QQ 回复消息前缀（已弃用）",
+    "description": "历史字段：肥牛在 QQ 私聊给 admin 的回复进入主上下文时是否附加前缀。当前版本已不再使用此前缀，AI 回复以原文形式入主上下文，与电脑端语音回复结构一致。保留此字段仅为向后兼容。",
+    "type": "string",
+    "default": "[QQ回复]",
+    "value": "[QQ回复]"
+  },
+  "enable_agent_tools": {
+    "title": "启用 AI Agent 工具",
+    "description": "admin 用户是否可通过自然语言触发文件/系统操作",
+    "type": "boolean",
+    "default": true,
+    "value": "true"
+  },
+  "allowed_paths": {
+    "title": "允许操作的目录",
+    "description": "AI Agent 可操作的目录白名单，JSON 数组。空数组表示不限制（建议配置）",
+    "type": "string",
+    "default": "[]",
+    "value": "[]"
+  }
+}

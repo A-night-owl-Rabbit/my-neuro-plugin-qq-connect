@@ -1,0 +1,21 @@
+{
+  "name": "my-neuro-plugin-qq-connect",
+  "version": "1.1.0",
+  "description": "my-neuro live-2d 社区插件：通过 OneBot 协议把肥牛桥接到 QQ，支持私聊/群聊智能回复、多级权限、远程 Agent 工具、admin 私聊与电脑端共享主上下文。",
+  "main": "index.js",
+  "scripts": {
+    "selftest": "node run-selftest.mjs"
+  },
+  "keywords": [
+    "my-neuro",
+    "live-2d",
+    "qq",
+    "onebot",
+    "llonebot",
+    "llbot",
+    "feiniu",
+    "plugin"
+  ],
+  "author": "FeiNiu",
+  "license": "CC-BY-NC-SA-4.0"
+}
