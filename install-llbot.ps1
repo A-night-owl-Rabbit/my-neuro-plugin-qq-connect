@@ -1,4 +1,4 @@
-# 安装 LLBOT (LuckyLilliaBot) —— qq-connect 插件的 QQ 客户端桥接程序
+﻿# 安装 LLBOT (LuckyLilliaBot) —— qq-connect 插件的 QQ 客户端桥接程序
 # 版本锁定 v7.12.2 Desktop win-x64,与插件测试环境一致
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
