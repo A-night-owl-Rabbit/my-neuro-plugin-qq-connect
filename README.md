@@ -84,9 +84,15 @@ LLBot 是把 LLOneBot 与 QQNT 客户端打包好的"开箱即用"版本，下�
 
 ### 1.1 下载 LLBot
 
-- 官方仓库：[https://github.com/LLOneBot/LLOneBot](https://github.com/LLOneBot/LLOneBot)（README 里指向 LLBot 整合包）。
-- 镜像 / 整合包：可在 LLOneBot 项目的 Releases 页找到 `LLBot.zip` 或 `LLBot-Setup.exe`。
-- 解压到一个**无中文、无空格**的目录（例如 `D:\tools\LLBOT\`）；带中文路径在某些 Windows 环境下会让 PowerShell / Electron 出问题。
+**方式一（推荐）：一键安装脚本**
+
+双击本仓库里的 **`安装LLBOT.bat`**：自动从官方 Releases 下载 **LuckyLilliaBot v7.12.2 Desktop 版**（约 90MB，与本插件的测试版本一致），做 SHA256 完整性校验后解压到插件目录下的 `LLBOT/` 文件夹。GitHub 直连失败时会自动尝试镜像源；全部失败会给出手动下载地址。
+
+**方式二：手动下载**
+
+- 官方仓库：[https://github.com/LLOneBot/LuckyLilliaBot](https://github.com/LLOneBot/LuckyLilliaBot)（Releases 页下载 `LLBot-Desktop-win-x64.zip`，本插件测试版本为 v7.12.2）。
+- 旧入口：[https://github.com/LLOneBot/LLOneBot](https://github.com/LLOneBot/LLOneBot)（README 里指向 LLBot 整合包）。
+- 解压到一个**无中文、无空格**的目录（例如插件目录下的 `LLBOT\`，或 `D:\tools\LLBOT\`）；带中文路径在某些 Windows 环境下会让 PowerShell / Electron 出问题。
 
 > ⚠️ **提示**：LLBot 是社区项目，请只从官方仓库链接下载，避免被植入恶意代码。下载完后建议用 VirusTotal 或杀毒软件扫一遍再运行。
 

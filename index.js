@@ -35,6 +35,15 @@ function numberValue(value, fallback) {
     return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function normalizeChatCompletionsEndpoint(url) {
+    const value = String(url || '').trim();
+    if (!value) return '';
+    if (/\/chat\/completions\/?$/i.test(value)) {
+        return value.replace(/\/+$/, '');
+    }
+    return `${value.replace(/\/+$/, '')}/chat/completions`;
+}
+
 class QQConnectPlugin extends Plugin {
 
     async onInit() {
@@ -79,6 +88,8 @@ class QQConnectPlugin extends Plugin {
         });
 
         this._enableAgentTools = boolValue(cfg.enable_agent_tools, true);
+        this._llmProviderId = String(cfg.llm_provider || '').trim();
+        this._llmModelId = String(cfg.llm_model || '').trim();
         this._normalRelayProb = numberValue(cfg.normal_relay_probability, 0.1);
         this._openReplyProb = numberValue(cfg.open_reply_probability, 0.1);
         this._maxReplyLen = intValue(cfg.max_reply_length, 200);
@@ -103,6 +114,7 @@ class QQConnectPlugin extends Plugin {
         this._ttsPlaying = false;
         this._connected = false;
         this._adminSession = null;
+        this._adminLLMControllers = new Set();
 
         this._onTTSStart = () => { this._ttsPlaying = true; };
         this._onTTSEnd = () => {
@@ -148,6 +160,13 @@ class QQConnectPlugin extends Plugin {
         this.context.removeSystemPromptPatch(SOURCE_TAGS_PATCH_ID);
         this._sessionMgr.stop();
         this._qqClient.disconnect();
+        // 中断所有在途的 admin LLM 请求，避免停用后仍在运行
+        if (this._adminLLMControllers) {
+            for (const controller of this._adminLLMControllers) {
+                try { controller.abort(); } catch (_) {}
+            }
+            this._adminLLMControllers.clear();
+        }
         this._ttsQueue = [];
         this._log('info', 'QQ Connect 已停止');
     }
@@ -499,37 +518,86 @@ class QQConnectPlugin extends Plugin {
     // ===== LLM 调用与工具循环 =====
 
     async _callLLMWithTools(messages, tools) {
-        const voiceChat = global.voiceChat;
-        if (!voiceChat) throw new Error('LLM 不可用');
+        const llm = this._resolveLLMConfig();
+        if (!llm.apiUrl || !llm.model) throw new Error('LLM 不可用');
 
         const body = {
-            model: voiceChat.MODEL,
+            model: llm.model,
             messages,
             stream: false,
             temperature: 0.8,
         };
         if (tools && tools.length > 0) body.tools = tools;
 
-        const response = await fetch(`${voiceChat.API_URL}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${voiceChat.API_KEY}`,
-            },
-            body: JSON.stringify(body),
-        });
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`API 错误 (${response.status}): ${errText.slice(0, 200)}`);
-        }
-        const data = await response.json();
-        const choice = data.choices[0];
+        // 为 admin LLM 请求加超时与可取消能力：端点卡死时不再无限挂起，
+        // 且 onStop 可中断在途请求，避免停用后仍在运行。
+        const timeoutMs = intValue(this._cfg && this._cfg.llm_timeout_ms, 600000);
+        const controller = new AbortController();
+        if (!this._adminLLMControllers) this._adminLLMControllers = new Set();
+        this._adminLLMControllers.add(controller);
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-        if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
-            return this._handleToolCalls(messages, choice.message, tools);
-        }
+        try {
+            const response = await fetch(llm.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${llm.apiKey}`,
+                },
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`API 错误 (${response.status}): ${errText.slice(0, 200)}`);
+            }
+            const data = await response.json();
+            const choice = data.choices[0];
 
-        return choice.message.content || '';
+            if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+                return this._handleToolCalls(messages, choice.message, tools);
+            }
+
+            return choice.message.content || '';
+        } catch (err) {
+            if (err && err.name === 'AbortError') {
+                throw new Error(`LLM 请求超时或已取消 (${timeoutMs}ms)`);
+            }
+            throw err;
+        } finally {
+            clearTimeout(timer);
+            this._adminLLMControllers.delete(controller);
+        }
+    }
+
+    _resolveLLMConfig() {
+        const providerModelId = this._llmProviderId ? this._llmModelId : '';
+        let resolved = this.context.resolveLLM(
+            this._llmProviderId || null,
+            providerModelId || null
+        );
+        if (!resolved?.api_url && global.voiceChat?.API_URL) {
+            resolved = {
+                api_url: global.voiceChat.API_URL,
+                api_key: global.voiceChat.API_KEY || '',
+                model: global.voiceChat.MODEL || ''
+            };
+        }
+        const apiUrl = String(resolved?.api_url || '').trim();
+        return {
+            apiUrl,
+            endpoint: normalizeChatCompletionsEndpoint(apiUrl),
+            apiKey: resolved?.api_key || '',
+            model: resolved?.model || ''
+        };
+    }
+
+    _llmCallOptions(options = {}) {
+        return {
+            ...(this._llmProviderId ? { provider_id: this._llmProviderId } : {}),
+            ...(this._llmProviderId && this._llmModelId ? { model: this._llmModelId } : {}),
+            ...options
+        };
     }
 
     async _handleToolCalls(messages, assistantMsg, tools) {
@@ -667,6 +735,7 @@ class QQConnectPlugin extends Plugin {
 
         try {
             const reply = await this.context.callLLM('', {
+                ...this._llmCallOptions(),
                 messages: session.buildMessages(systemPrompt),
                 temperature: 0.8,
             });
@@ -683,7 +752,10 @@ class QQConnectPlugin extends Plugin {
                 `${nickname}在QQ上跟你说了："${content.slice(0, 60)}"，你回复了："${trimmed.slice(0, 60)}"。` +
                 `请用一两句自然口语把这件事转述给主人，不要用情感标签。`;
             try {
-                const relayText = await this.context.callLLM(relayPrompt, { temperature: 0.8 });
+                const relayText = await this.context.callLLM(
+                    relayPrompt,
+                    this._llmCallOptions({ temperature: 0.8 })
+                );
                 this._enqueueTTSRelay(relayText.slice(0, 150));
             } catch {
                 this._enqueueTTSRelay(`主人，QQ上${nickname}说："${content.slice(0, 30)}"，我回他了。`);
@@ -709,6 +781,7 @@ class QQConnectPlugin extends Plugin {
 
         try {
             const reply = await this.context.callLLM('', {
+                ...this._llmCallOptions(),
                 messages: session.buildMessages(systemPrompt),
                 temperature: 0.8,
             });
@@ -739,7 +812,10 @@ class QQConnectPlugin extends Plugin {
             const relayPrompt = `你是${aiName}。有人在${sourceDesc}说了"${content.slice(0, 100)}"。` +
                 `请用简短自然的话（不超过50字）把这件有趣的事转述给主人。不要使用 Markdown。`;
 
-            const relayText = await this.context.callLLM(relayPrompt, { temperature: 0.8 });
+            const relayText = await this.context.callLLM(
+                relayPrompt,
+                this._llmCallOptions({ temperature: 0.8 })
+            );
             const trimmed = relayText.slice(0, 100);
 
             await this._qqClient.sendPrivateMessage(adminQQ, trimmed);

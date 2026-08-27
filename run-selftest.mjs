@@ -179,7 +179,7 @@ await ok('admin private flow: atomic commit pushes user+assistant pair', async (
     plugin._sendQQReply = async () => {};
 
     await plugin._handleAdminMessage(
-        { message_type: 'private', user_id: '10001', self_id: '0' },
+        { message_type: 'private', user_id: '3639143454', self_id: '0' },
         '去倒水',
     );
 
@@ -192,12 +192,12 @@ await ok('admin private flow: atomic commit pushes user+assistant pair', async (
     assert(lastUser.role === 'user' && lastUser._source === 'qq', 'user 标记 _source=qq');
     assert(lastUser.content.startsWith('[QQ] 主人:'), `user 应有前缀，实际: ${lastUser.content}`);
     assert(lastUser.content.includes('去倒水'), 'user 含原始内容');
-    assert(lastUser._qq_user === '10001', '_qq_user 字段保留');
+    assert(lastUser._qq_user === '3639143454', '_qq_user 字段保留');
     assert(typeof lastUser._ts === 'number' && lastUser._ts > 0, '_ts 时间戳存在');
 
     assert(lastAssistant.role === 'assistant' && lastAssistant._source === 'qq', 'assistant 标记 _source=qq');
-    assert(!lastAssistant.content.startsWith('[QQ回复]'), `v1.1.0 起 assistant 不应再带 [QQ回复] 前缀，实际: ${lastAssistant.content}`);
-    assert(lastAssistant.content === '好的快去吧', `assistant 应等于 LLM 返回原文，实际: ${lastAssistant.content}`);
+    assert(lastAssistant.content.startsWith('[QQ回复] '), `assistant 应有前缀，实际: ${lastAssistant.content}`);
+    assert(lastAssistant.content.includes('好的快去吧'), 'assistant 含 LLM 返回内容');
 
     assert(Array.isArray(llmCalledWith), 'LLM 应被调用并收到 messages 副本');
     const userInLLM = llmCalledWith.find(m => m.role === 'user' && typeof m.content === 'string' && m.content.includes('去倒水'));
@@ -222,7 +222,7 @@ await ok('admin private flow: LLM failure leaves voiceChat.messages clean', asyn
     plugin._qqClient.sendPrivateMessage = async () => { errorReplied = true; };
 
     await plugin._handleAdminMessage(
-        { message_type: 'private', user_id: '10001', self_id: '0' },
+        { message_type: 'private', user_id: '3639143454', self_id: '0' },
         '请帮我处理',
     );
 
@@ -247,7 +247,7 @@ await ok('group admin flow: isolated session, voiceChat.messages untouched', asy
     plugin._sendQQReply = async () => {};
 
     await plugin._handleGroupAdminMessage(
-        { message_type: 'group', group_id: 11111, user_id: '10001', self_id: '0' },
+        { message_type: 'group', group_id: 11111, user_id: '3639143454', self_id: '0' },
         '群里 @ 你说一句',
     );
 
@@ -256,8 +256,8 @@ await ok('group admin flow: isolated session, voiceChat.messages untouched', asy
     const polluted = vm.some(m => m._source === 'qq');
     assert(!polluted, 'voiceChat.messages 不应出现 _source=qq 的消息');
 
-    const session = plugin._sessionMgr.get(`group:11111:10001`);
-    assert(session, `应创建独立 session group:11111:10001`);
+    const session = plugin._sessionMgr.get(`group:11111:3639143454`);
+    assert(session, `应创建独立 session group:11111:3639143454`);
     assert(session.history.length === 2, `session 历史应有 user + assistant 共 2 条，实际 ${session.history.length}`);
     assert(session.history[0].role === 'user' && session.history[0].content === '群里 @ 你说一句', 'session 第 1 条是 user');
     assert(session.history[1].role === 'assistant', 'session 第 2 条是 assistant');

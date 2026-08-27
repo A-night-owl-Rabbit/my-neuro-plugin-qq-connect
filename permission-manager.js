@@ -8,7 +8,7 @@ class PermissionManager {
         for (const user of trustedUsers) {
             const qq = String(user.qq || '').trim();
             if (!qq) continue;
-            const level = VALID_LEVELS.has(user.level) ? user.level : 'trusted';
+            const level = VALID_LEVELS.has(user.level) ? user.level : 'none';
             this._users.set(qq, level);
             if (user.nickname) this._nicknames.set(qq, user.nickname);
         }
@@ -17,7 +17,7 @@ class PermissionManager {
     addUser(qq, level = 'trusted', nickname = '') {
         const id = String(qq).trim();
         if (!id) return;
-        this._users.set(id, VALID_LEVELS.has(level) ? level : 'trusted');
+        this._users.set(id, VALID_LEVELS.has(level) ? level : 'none');
         if (level === 'admin') {
             this._nicknames.delete(id);
         } else if (nickname) {

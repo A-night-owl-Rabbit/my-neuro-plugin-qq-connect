@@ -18,14 +18,14 @@
     "description": "插件启动时是否自动连接 OneBot 服务",
     "type": "boolean",
     "default": false,
-    "value": "false"
+    "value": "true"
   },
   "trusted_users": {
     "title": "信任用户列表",
     "description": "JSON 数组，格式: [{\"qq\":\"123456\",\"level\":\"admin\",\"nickname\":\"主人\"}]。level: admin/trusted/normal",
     "type": "string",
     "default": "[]",
-    "value": "[]"
+    "value": " [{\"qq\":\"3639143454\",\"level\":\"admin\",\"nickname\":\"主人\"},{\"qq\":\"986926814\",\"level\":\"trusted\",\"nickname\":\"妹妹\"}]"
   },
   "trusted_groups": {
     "title": "信任群聊列表",
@@ -109,7 +109,7 @@
     "description": "开启后，较长回复会按句号/问号/感叹号拆成多条发送，更像真人聊天。默认关闭。",
     "type": "boolean",
     "default": false,
-    "value": "false"
+    "value": "true"
   },
   "segmented_reply_interval_ms": {
     "title": "分段回复间隔（毫秒）",
@@ -151,7 +151,7 @@
     "description": "启用后，如果 OneBot 访问令牌为空，插件启动连接时会输出安全提醒。",
     "type": "boolean",
     "default": true,
-    "value": "true"
+    "value": true
   },
   "session_timeout": {
     "title": "会话超时（秒）",
@@ -175,8 +175,8 @@
     "value": "[QQ]"
   },
   "qq_reply_prefix": {
-    "title": "QQ 回复消息前缀（已弃用）",
-    "description": "历史字段：肥牛在 QQ 私聊给 admin 的回复进入主上下文时是否附加前缀。当前版本已不再使用此前缀，AI 回复以原文形式入主上下文，与电脑端语音回复结构一致。保留此字段仅为向后兼容。",
+    "title": "QQ 回复消息前缀",
+    "description": "肥牛在 QQ 私聊中给 admin 的回复，写入主上下文时附加的来源前缀。",
     "type": "string",
     "default": "[QQ回复]",
     "value": "[QQ回复]"
@@ -194,5 +194,20 @@
     "type": "string",
     "default": "[]",
     "value": "[]"
+  },
+  "llm_provider": {
+    "title": "QQ 回复 LLM 提供商",
+    "description": "选了这里就优先用它（提供商在 WebUI「LLM 配置」页管理），旧的手填地址/Key/模型会被忽略；留空时才看旧手填字段，都没填就用主对话模型。",
+    "type": "llm_provider",
+    "default": "",
+    "value": ""
+  },
+  "llm_model": {
+    "title": "QQ 回复 LLM 模型",
+    "description": "先选提供商，这里才能选它名下的模型；留空就用该提供商的默认模型。换提供商时这里会自动清空。",
+    "type": "llm_model",
+    "provider_field": "llm_provider",
+    "default": "",
+    "value": ""
   }
 }
